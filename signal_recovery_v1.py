@@ -1,15 +1,42 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-Created on Tue Apr 11 12:23:25 2017
+Created on Tue Apr 09 12:23:25 2017
 
 @author: YingxueZhang
 """
-#graph generation 
 import networkx as nx
 import numpy as np  
 import matplotlib.pyplot as plt
 import pandas as pd
+#graph generation
+def graph_generation(N,graph_type='ring graph',base_mode='adjacency'):
+    if graph_type=='ring graph':
+        k=4   #neighbor number
+        p=0
+        G=nx.newman_watts_strogatz_graph(N, k, p, seed=None)    #ring graph
+        fourier_basis=normalized_fourier_basis(G,base_mode='adjacency')
+    if graph_type=='random graph':
+        G = nx.erdos_renyi_graph(N,0.1)                         #random graph(Erdos-Renyi Graph)
+        fourier_basis=normalized_fourier_basis(G,base_mode='adjacency')
+    return fourier_basis
+
+def matrix_eigenvalue_normalization(M):
+    Sigma_M, V_M = np.linalg.eigh(M) 
+    index_sig = np.argsort(Sigma_M)
+    Sigma_M = Sigma_M[index_sig[::-1]] #sorting the eigenvalue
+    V_M = V_M[:,index_sig[::-1]] #sorting the according eigenvectors
+    #Normalized matrix A
+    M=M/Sigma_M[0] #normalized matrix A in order to let the biggest eigenvalue=1
+    Sigma_M, V_M = np.linalg.eigh(M) 
+    index_sig = np.argsort(Sigma_M)
+    Sigma_M = Sigma_M[index_sig[::-1]]
+    Normalize_eigenvector = V_M[:,index_sig[::-1]]
+    return  Normalize_eigenvector
+    
+
+
+#fourier basis generation
 def normalized_fourier_basis(G,base_mode='adjacency'):
     if base_mode=='adjacency':
         A=nx.adjacency_matrix(G, nodelist=None, weight='weight').todense() 
@@ -37,28 +64,17 @@ def normalized_fourier_basis(G,base_mode='adjacency'):
         Fourier_basis = V_L[:,index_sig[::-1]]
     return Fourier_basis
     
-def graph_generation(N,graph_type='ring graph',base_mode='adjacency'):
-    if graph_type=='ring graph':
-        k=4   #neighbor number
-        p=0
-        G=nx.newman_watts_strogatz_graph(N, k, p, seed=None)    #ring graph
-        fourier_basis=normalized_fourier_basis(G,base_mode='adjacency')
-    if graph_type=='random graph':
-        G = nx.erdos_renyi_graph(N,0.1)                         #random graph(Erdos-Renyi Graph)
-        fourier_basis=normalized_fourier_basis(G,base_mode='adjacency')
-    return fourier_basis
-
+#signal generation
 def graph_signal_generation(n,K,beta,Fourier_basis):
     N=n
     K=10
-#    beta=1#beta is large the performance ganna be better
     signal=[]
     for i in range(N):
         if i<K:
             signal.append(np.random.normal(1,0.5*0.5))
         else:
             signal.append((float(K)/i)**(2*beta))
-            #signal.append(0)
+            #signal.append(0)  #test the completely band limited case
     signal=np.asarray(signal)
     signal_norm=np.linalg.norm(signal)  #fourier transform x_f=U_A*x
     signal_norm=signal/signal_norm
@@ -68,22 +84,28 @@ def graph_signal_generation(n,K,beta,Fourier_basis):
     x=np.asarray(x)
     x=x.reshape(n,)
     return x
+#signal normalization
+def normalized(x):
+    norm_a=[]
+    sum_x=np.sum(x)
+    for i in x:
+        norm_a.append(float(i)/sum_x)
+    return norm_a
 
-#generate the distribution score
-def sampling_score(Fourier_basis_K):
-    dist=[]
-    for i in Fourier_basis_K:
-        dist.append(np.linalg.norm(i))
-    def normalized(x):
-        norm_a=[]
-        sum_x=np.sum(x)
-        for i in x:
-            norm_a.append(float(i)/sum_x)
-        return norm_a
-    norm_dist=normalized(dist)
-    norm_dist=np.asarray(norm_dist)
+#generate the sampling score based on graph structure
+def sampling_score(N,Fourier_basis_K,sampling_mode):
+    if sampling_mode=='uniform sampling':
+        dist=float(1)/N
+        norm_dist=dist*np.ones(N)
+    if sampling_mode=='experiment design':
+        dist=[]
+        for i in Fourier_basis_K:
+            dist.append(np.linalg.norm(i))
+        norm_dist=normalized(dist)
+        norm_dist=np.asarray(norm_dist)
     return norm_dist
 
+#sacle_matrix generation based on sampling score
 def sacle_matrix(sample_score,m):
     Scaling_matrix=[]
     for i in sample_score:
@@ -103,20 +125,17 @@ def sample_operator(x,m):
         sampling_operator[i][sample_index[i]]=1
     sampling_operator=np.matrix(sampling_operator)
     return sampling_operator
-
+#================================================================================================
 #generate graph fourier transform basis
 N=1000
+K=10 #band limit
+beta=0.5 #control the frequency band outside the bandlimit
 Fourier_basis=graph_generation(N,graph_type='ring graph',base_mode='adjacency')
 Inv_fourier_basis=np.linalg.inv(Fourier_basis)
-
-K=10 #band limit
-beta=1
 signal_g=graph_signal_generation(N,K,beta,Fourier_basis)
-fiq=plt.figure(1)
-plt.plot(signal_g)
 
 MSE=[]
-Recovery_lib=[]
+Recovery_signal=[]
 
 m_value=range(100,N,100)
 for m in m_value:
@@ -125,7 +144,7 @@ for m in m_value:
     K=30
     Fourier_basis_K=Fourier_basis[:,0:K]
     Inv_fourier_basis_K=Inv_fourier_basis[0:K,:]
-    sample_score=sampling_score(Fourier_basis_K)
+    sample_score=sampling_score(N,Fourier_basis_K,sampling_mode='uniform sampling')
     Scaling_matrix=sacle_matrix(sample_score,m)
     
     sampling_operator=sample_operator(signal_g,m)
@@ -140,16 +159,23 @@ for m in m_value:
     norm=np.linalg.norm(x_recovery-x1)
     print norm
     MSE.append(norm)
-    Recovery_lib.append(x_recovery)
+    Recovery_signal.append(x_recovery)
     
-fig4=plt.figure(4)
+fig1=plt.figure(1)
 plt.plot(signal_g,label='x original')
 plt.plot(x_recovery,label='x recovery')
 legend = plt.legend(loc='upper right', shadow=True)
 plt.title('comparison between recovery signal and original signal')
 
+fig2=plt.figure(2)
+plt.plot(m_value,np.log(MSE))
+plt.title('Log mean square error')
+plt.xlabel('sample number')
+plt.ylabel('log MSE')
+
 MSE1=pd.Series(MSE)
-MSE1.to_csv('output.csv')
+file_name='MSE_N_'+str(N)+'_beta_'+str(beta)
+MSE1.to_csv('MSE.csv')
 
     
 #generate graph signal
