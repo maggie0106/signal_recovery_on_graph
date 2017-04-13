@@ -1,6 +1,5 @@
 # signal_recovery_on_graph
-signal recovery on graph using uniform sampilng and experiment design sampling
-This experiment is aim to reproduce the results from the paper Signal recovery on graphs: Fundamental limits of sampling strategies. [1]
+This code is aim to reproduce the results from the paper Signal recovery on graphs: Fundamental limits of sampling strategies. [1]
 
 
 
