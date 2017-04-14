@@ -2,6 +2,7 @@
 This code is aim to reproduce the results from the paper Signal recovery on graphs: Fundamental limits of sampling strategies. [1]
 
 The following parameters could affect the performance of this signal recovery method:
+
 •	graph type: ring graph/random graph/random geometric graph
 
 •	graph Fourier basis: Adjacency basis or Laplacian basis
@@ -17,8 +18,6 @@ The following parameters could affect the performance of this signal recovery me
 •	spectral decay (beta increase, the spectral decay faster)
 
 •	signal recovery bandwidth (according to the paper this parameter should be set to max⁡(10,m^(1/(2*beta+1)))to achieve optimcal rate of convergence)
-
-
 
 
 
