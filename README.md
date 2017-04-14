@@ -3,7 +3,9 @@ This code is aim to reproduce the results from the paper Signal recovery on grap
 
 The following parameters could affect the performance of this signal recovery method:
 •	graph type: ring graph/random graph/random geometric graph
+
 •	graph Fourier basis: Adjacency basis or Laplacian basis
+
 •	node number: (N)
 •	sample score: uniform sampling or experiment design sampling(experiment design sampling including: leverage score/square root leverage score)
 •	sample number (m)
