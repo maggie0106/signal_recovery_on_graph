@@ -9,6 +9,8 @@ import networkx as nx
 import numpy as np  
 import matplotlib.pyplot as plt
 import pandas as pd
+import sys
+
 #graph generation
 def graph_generation(N,graph_type,base_mode):
     if graph_type=='ring graph':
@@ -16,12 +18,15 @@ def graph_generation(N,graph_type,base_mode):
         p=0
         G=nx.newman_watts_strogatz_graph(N, k, p, seed=None)    #ring graph
         fourier_basis=normalized_fourier_basis(G,base_mode)
-    if graph_type=='random graph':
+    elif graph_type=='random graph':
         G = nx.erdos_renyi_graph(N,0.1)                         #random graph(Erdos-Renyi Graph)
         fourier_basis=normalized_fourier_basis(G,base_mode)
-    if graph_type=='random geometric graph':
+    elif graph_type=='random geometric graph':
         G=nx.random_geometric_graph(N,0.1)
         fourier_basis=normalized_fourier_basis(G,base_mode)
+    else:
+        print 'this graph type is not allowed'
+        sys.exit()
     return fourier_basis
 
 def matrix_eigenvalue_normalization(M):
@@ -43,10 +48,13 @@ def normalized_fourier_basis(G,base_mode):
         A=nx.adjacency_matrix(G, nodelist=None, weight='weight').todense() 
         Fourier_basis=matrix_eigenvalue_normalization(A)
         print 'adjacency mode'
-    if base_mode=='Laplacian':
+    elif base_mode=='Laplacian':
         Laplacian = nx.normalized_laplacian_matrix(G).todense()
         Fourier_basis=matrix_eigenvalue_normalization(Laplacian)
         print 'Laplacian mode'
+    else:
+        print 'this fourier_basis is not allowed'
+        sys.exit()
     return Fourier_basis
     
 #signal generation
@@ -58,13 +66,14 @@ def graph_signal_generation(n,K,beta,Fourier_basis):
         if i<K:
             signal.append(np.random.normal(1,0.5))
         else:
-            signal.append((float(K)/i)**(2*beta))
-            #signal.append(0)  #test the completely band limited case
+            #signal.append((float(K)/i)**(2*beta))
+            signal.append(0)  #test the completely band limited case
     signal=np.asarray(signal)
     signal_norm=np.linalg.norm(signal)  #fourier transform x_f=U_A*x
     signal_norm=signal/signal_norm
     signal_norm=np.transpose(signal_norm)
     signal_norm=signal_norm.reshape(len(signal),1)
+
     x=Fourier_basis*signal_norm
     x=np.asarray(x)
     x=x.reshape(n,1)
@@ -132,6 +141,7 @@ def signal_recovery(signal_g,Fourier_basis,K,epsilon,sampling_mode):
     x_recovery=Fourier_basis_K*Inv_fourier_basis_K*np.transpose(sampling_operator)\
     *sampling_operator*Scaling_matrix*Scaling_matrix\
     *np.transpose(sampling_operator)*y
+    
     return x_recovery
 
 def comparison_plot(N):
@@ -149,29 +159,29 @@ def comparison_plot(N):
 
 #=================================Main function======================================================
 #generate graph fourier transform basis
-'''
-N=2000 #node number in the network
+
+N=5000 #node number in the network
 K=10 #band limit
-beta=1 #spectral decay factor
+beta=0.5 #spectral decay factor
 epsilon=10**-4  #noise introducing into the system N~(0,epsilon)
 base_mode='adjacency'
-graph_type='random geometric graph'#'random geometric graph'    #'ring graph'
-
-Fourier_basis=graph_generation(N,graph_type,base_mode)
-Inv_fourier_basis=np.linalg.inv(Fourier_basis)
-signal_g=graph_signal_generation(N,K,beta,Fourier_basis)
-'''
+graph_type='ring graph'#'random geometric graph'    #'ring graph'
 sampling_mode='uniform_sampling' #uniform_sampling or square_root_leverage_score
+
+Inv_fourier_basis=graph_generation(N,graph_type,base_mode)
+Fourier_basis=np.linalg.inv(Inv_fourier_basis)
+signal_g=graph_signal_generation(N,K,beta,Inv_fourier_basis)
+
+sampling_mode='square_root_leverage_score' 
 MSE=[]
 Recovery_signal=[]
 
-m_value=range(100,N,100)
+m_value=range(100,N,300)
 for m in m_value:
     print 'm=',m
     K_recovery=max(int(m**(float(1)/(2*beta+1))),10) #recovery bandwidth
     print K_recovery
-    #K_recovery=30
-    x_recovery=signal_recovery(signal_g,Fourier_basis,K_recovery,epsilon,sampling_mode)
+    x_recovery=signal_recovery(signal_g,Inv_fourier_basis,K_recovery,epsilon,sampling_mode)
     norm=np.linalg.norm(x_recovery-signal_g)
     print norm
     MSE.append(norm)
@@ -181,14 +191,14 @@ MSE1=pd.Series(MSE)
 file_name='MSE '+sampling_mode+'.csv'  
 MSE1.to_csv(file_name,index=False,header=['MSE'])
     
-#==================================Figures==============================================================  
-fig1=plt.figure(figsize=(9,6))
+#==================================Plot figures==============================================================  
+fig1=plt.figure(figsize=(7,5))
 plt.plot(signal_g,label='x original')
 plt.plot(x_recovery,label='x recovery')
 legend = plt.legend(loc='upper right', shadow=True)
 plt.title('comparison between recovery signal and original signal')
 
-fig2=plt.figure(figsize=(9,6))
+fig2=plt.figure(figsize=(7,5))
 plt.plot(m_value,np.log(MSE))
 title='Log mean square error for '+sampling_mode
 plt.title(title)
