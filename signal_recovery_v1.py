@@ -66,8 +66,8 @@ def graph_signal_generation(n,K,beta,Fourier_basis):
         if i<K:
             signal.append(np.random.normal(1,0.5))
         else:
-            #signal.append((float(K)/i)**(2*beta))
-            signal.append(0)  #test the completely band limited case
+            signal.append((float(K)/i)**(2*beta))
+            #signal.append(0)  #test the completely band limited case
     signal=np.asarray(signal)
     signal_norm=np.linalg.norm(signal)  #fourier transform x_f=U_A*x
     signal_norm=signal/signal_norm
@@ -158,9 +158,8 @@ def comparison_plot(N):
     plt.ylabel('log MSE')
 
 #=================================Main function======================================================
-#generate graph fourier transform basis
 
-N=5000 #node number in the network
+N=2000 #node number in the network
 K=10 #band limit
 beta=0.5 #spectral decay factor
 epsilon=10**-4  #noise introducing into the system N~(0,epsilon)
@@ -172,11 +171,10 @@ Inv_fourier_basis=graph_generation(N,graph_type,base_mode)
 Fourier_basis=np.linalg.inv(Inv_fourier_basis)
 signal_g=graph_signal_generation(N,K,beta,Inv_fourier_basis)
 
-sampling_mode='square_root_leverage_score' 
 MSE=[]
 Recovery_signal=[]
 
-m_value=range(100,N,300)
+m_value=range(N/10,N,N/10)
 for m in m_value:
     print 'm=',m
     K_recovery=max(int(m**(float(1)/(2*beta+1))),10) #recovery bandwidth
@@ -187,10 +185,11 @@ for m in m_value:
     MSE.append(norm)
     Recovery_signal.append(x_recovery)
 #==================================Save file==============================================================   
+'''
 MSE1=pd.Series(MSE)
 file_name='MSE '+sampling_mode+'.csv'  
 MSE1.to_csv(file_name,index=False,header=['MSE'])
-    
+'''  
 #==================================Plot figures==============================================================  
 fig1=plt.figure(figsize=(7,5))
 plt.plot(signal_g,label='x original')
