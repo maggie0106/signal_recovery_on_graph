@@ -7,11 +7,17 @@ The following parameters could affect the performance of this signal recovery me
 •	graph Fourier basis: Adjacency basis or Laplacian basis
 
 •	node number: (N)
+
 •	sample score: uniform sampling or experiment design sampling(experiment design sampling including: leverage score/square root leverage score)
+
 •	sample number (m)
+
 •	introduced noise: N~ (0, epsilon )
+
 •	spectral decay (beta increase, the spectral decay faster)
+
 •	signal recovery bandwidth (according to the paper this parameter should be set to max⁡(10,m^(1/(2*beta+1)))to achieve optimcal rate of convergence)
+
 
 
 
